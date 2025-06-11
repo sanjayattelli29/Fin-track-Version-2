@@ -1,0 +1,82 @@
+
+# Local Storage in Money Harmony Keeper
+
+This document outlines all the local storage keys used in the Money Harmony Keeper application.
+
+## Data Storage Keys
+
+1. **user_accounts**
+   - Description: Stores all user accounts
+   - Format: Array of account objects: `[{id: string, name: string, isActive: boolean}]`
+   - Example: `[{"id":"a1b2c3","name":"Personal Account","isActive":true}]`
+
+2. **finance_transactions**
+   - Description: Stores all financial transactions by account
+   - Format: Object with account IDs as keys and arrays of transactions as values
+   - Example: `{"a1b2c3":[{"id":"t1","date":"2025-05-01","investment":100,"earnings":200,"spending":50,"toBeCredit":0,"salary":0}]}`
+
+3. **finance_rates**
+   - Description: Stores default commission and tax rates
+   - Format: Object with commission and tax values
+   - Example: `{"commission":1.17,"tax":1.17}`
+
+4. **user_profile**
+   - Description: Stores user profile settings
+   - Format: Object containing user preferences and settings
+   - Properties:
+     - name: User's name
+     - imageUrl: URL to profile picture
+     - showDebtFeature: Whether to show debt tracking features
+     - showAllAccountsAnalysis: Whether to show combined account analysis
+   - Example: `{"name":"Sanjay Kumar","imageUrl":"","showDebtFeature":true,"showAllAccountsAnalysis":false}`
+
+## Feature Flags
+
+These are booleans stored in the user_profile object:
+
+1. **showDebtFeature**
+   - Controls visibility of debt tracking functionality
+   - When enabled: Shows debt inputs in forms, debt calculations in summaries
+   - When disabled: Hides all debt-related UI elements
+
+2. **showAllAccountsAnalysis**
+   - Controls whether to show the combined analysis of all accounts
+   - When enabled: Displays the AllAccountsAnalysis component instead of regular dashboard
+   - When disabled: Shows the regular dashboard with single account view
+
+## Data Structure Overview
+
+### Account
+```typescript
+interface Account {
+  id: string;          // UUID for the account
+  name: string;        // Display name
+  isActive: boolean;   // Whether this is the currently selected account
+}
+```
+
+### Transaction
+```typescript
+interface Transaction {
+  id: string;          // UUID for the transaction
+  date: string;        // ISO date string (YYYY-MM-DD)
+  investment: number;  // Investment amount
+  earnings: number;    // Income/earnings amount
+  spending: number;    // Spending/expense amount
+  toBeCredit: number;  // Amount to be credited later
+  salary?: number;     // Salary amount (optional)
+  debt?: number;       // Debt principal (optional)
+  interestRate?: number; // Interest rate percentage (optional)
+  salaryEntries?: SalaryEntry[]; // Detailed salary entries (optional)
+}
+```
+
+### Salary Entry
+```typescript
+interface SalaryEntry {
+  name: string;        // Name of the salary source
+  purpose: string;     // Purpose/description
+  amount: number;      // Salary amount
+  date: string;        // ISO date string (YYYY-MM-DD)
+}
+```
