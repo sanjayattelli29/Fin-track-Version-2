@@ -10,14 +10,15 @@ import Footer from '@/components/Footer';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Account, Transaction } from '@/hooks/transactions/types';
 
 const Analytics = () => {
-  const [username, setUsername] = useState("Sanjay Kumar");
-  const [profileImage, setProfileImage] = useState("");
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [transactions, setTransactions] = useState<Record<string, any[]>>({});
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [currentAccount, setCurrentAccount] = useState<any>(null);
+  const [username, setUsername] = useState<string>("Sanjay Kumar");
+  const [profileImage, setProfileImage] = useState<string>("");
+  const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
+  const [transactions, setTransactions] = useState<Record<string, Transaction[]>>({});
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [currentAccount, setCurrentAccount] = useState<Account | null>(null);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
@@ -32,22 +33,71 @@ const Analytics = () => {
       }
     }
     
-    // Load accounts
-    const savedAccounts = localStorage.getItem('user_accounts');
-    if (savedAccounts) {
-      const parsedAccounts = JSON.parse(savedAccounts);
-      setAccounts(parsedAccounts);
-      
-      const activeAccount = parsedAccounts.find((acc: any) => acc.isActive);
-      if (activeAccount) {
-        setCurrentAccount(activeAccount);
-      } else if (parsedAccounts.length > 0) {
-        setCurrentAccount(parsedAccounts[0]);
-      }
-    }
+    // Function to reload accounts and transactions
+    const reloadData = () => {
+      // Load accounts
+      const savedAccounts = localStorage.getItem('user_accounts');
+      let parsedAccounts: Account[] = [];
+      if (savedAccounts) {
+        parsedAccounts = JSON.parse(savedAccounts);
+        setAccounts(parsedAccounts);
 
-    // Load transactions
-    loadTransactions();
+        const activeAccount = parsedAccounts.find((acc) => acc.isActive);
+        if (activeAccount) {
+          setCurrentAccount(activeAccount);
+        } else if (parsedAccounts.length > 0) {
+          setCurrentAccount(parsedAccounts[0]);
+        } else {
+          setCurrentAccount(null);
+        }
+      } else {
+        setAccounts([]);
+        setCurrentAccount(null);
+      }
+
+      // Load transactions
+      const savedTransactions = localStorage.getItem('finance_transactions');
+      if (savedTransactions) {
+        try {
+          const allTransactions = JSON.parse(savedTransactions);
+          if (typeof allTransactions === 'object' && !Array.isArray(allTransactions)) {
+            setTransactions(allTransactions);
+          } else {
+            const defaultAccountId = parsedAccounts.length > 0 ? parsedAccounts[0].id : "1";
+            const transactionsObject: Record<string, Transaction[]> = {
+              [defaultAccountId]: allTransactions as Transaction[]
+            };
+            setTransactions(transactionsObject);
+          }
+        } catch (error) {
+          setTransactions({});
+        }
+      } else {
+        setTransactions({});
+      }
+    };
+
+    reloadData();
+
+    // Listen for storage changes (account switch, etc.)
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === 'user_accounts' || event.key === 'finance_transactions') {
+        reloadData();
+      }
+    };
+
+    // Listen for window focus (user returns to tab)
+    const handleFocus = () => {
+      reloadData();
+    };
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   const loadTransactions = () => {
@@ -73,16 +123,16 @@ const Analytics = () => {
     }
   };
 
-  const getCurrentAccountTransactions = () => {
+  const getCurrentAccountTransactions = (): Transaction[] => {
     if (!currentAccount) return [];
     return transactions[currentAccount.id] || [];
   };
 
-  const getCurrentMonthTransactions = () => {
+  const getCurrentMonthTransactions = (): Transaction[] => {
     const monthStart = startOfMonth(currentMonth);
     const monthEnd = endOfMonth(currentMonth);
     
-    return getCurrentAccountTransactions().filter((t: any) => {
+    return getCurrentAccountTransactions().filter((t) => {
       const date = new Date(t.date);
       return date >= monthStart && date <= monthEnd;
     });

@@ -12,6 +12,7 @@ import AllAccountsAnalysis from '@/components/AllAccountsAnalysis';
 import { Transaction, SummaryData, SalaryEntry, CalendarTransaction, Account, DebtEntry } from '@/hooks/transactions/types';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/lib/format';
 
 // Local type to match EntryForm's expectations
 interface EntryFormDebtEntry {
@@ -71,6 +72,14 @@ const DashboardContent: React.FC<DashboardContentProps> = ({
   
   // Find the active account to display its number
   const activeAccount = accounts.find(account => account.isActive);
+
+  // Calculate Whole Deposits for the active account
+  const wholeDeposits = React.useMemo(() => {
+    if (!activeAccount) return 0;
+    return transactions
+      .filter(tx => tx.account_id === activeAccount.id)
+      .reduce((sum, tx) => sum + (tx.earnings || 0) + (tx.salary || 0), 0);
+  }, [transactions, activeAccount]);
   
   // Convert EntryForm's debt entry format to the expected format
   const handleAddDebtEntryForForm = (entry: EntryFormDebtEntry) => {
@@ -102,6 +111,10 @@ const DashboardContent: React.FC<DashboardContentProps> = ({
             <span className="ml-2 text-sm text-muted-foreground">
               {activeAccount.name}
             </span>
+            {/* Whole Deposits Showcase */}
+            <div className="ml-4 px-3 py-1 rounded-lg bg-green-100 text-green-800 font-semibold text-sm shadow">
+              Whole Deposits: {formatCurrency(wholeDeposits)}
+            </div>
           </div>
           <Link 
             to="/switch-accounts" 
